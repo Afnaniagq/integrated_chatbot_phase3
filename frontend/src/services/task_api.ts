@@ -13,7 +13,7 @@ import {
 export const taskApi = {
   // Get all tasks
   getTasks: async (filters?: TaskFilters): Promise<TaskApiResponse> => {
-    const response = await apiClient.get('/tasks', { params: filters });
+    const response = await apiClient.get('/tasks/', { params: filters });
     return response.data;
   },
 
@@ -27,7 +27,7 @@ export const taskApi = {
       user_id: payload?.sub 
     };
 
-    const response = await apiClient.post('/tasks', taskWithUser);
+    const response = await apiClient.post('/tasks/', taskWithUser);
     return response.data;
   },
 
@@ -39,24 +39,24 @@ export const taskApi = {
 
   // Update a task
   updateTask: async (taskId: string, taskData: TaskUpdateData): Promise<Task> => {
-    const response = await apiClient.put(`/tasks/${taskId}`, taskData);
+    const response = await apiClient.put(`/tasks/${taskId}/`, taskData);
     return response.data;
   },
 
   // Toggle completion
   toggleTaskCompletion: async (taskId: string): Promise<Task> => {
-    const response = await apiClient.patch(`/tasks/${taskId}/toggle`);
+    const response = await apiClient.patch(`/tasks/${taskId}/toggle/`);
     return response.data;
   },
 
   // Delete a task
   deleteTask: async (taskId: string): Promise<void> => {
-    await apiClient.delete(`/tasks/${taskId}`);
+    await apiClient.delete(`/tasks/${taskId}/`);
   },
 
   // Bulk update
   bulkUpdateTasks: async (taskIds: string[], updateType: string, params: any): Promise<BulkOperationResponse> => {
-    const response = await apiClient.post('/tasks/bulk/update', {
+    const response = await apiClient.post('/tasks/bulk/update/', {
       task_ids: taskIds,
       update_type: updateType,
       params
@@ -66,7 +66,7 @@ export const taskApi = {
 
   // Bulk delete
   bulkDeleteTasks: async (taskIds: string[]): Promise<BulkOperationResponse> => {
-    const response = await apiClient.post('/tasks/bulk/delete', {
+    const response = await apiClient.post('/tasks/bulk/delete/', {
       task_ids: taskIds
     });
     return response.data;
@@ -74,13 +74,13 @@ export const taskApi = {
 
   // Get trash
   getTrashItems: async (limit: number = 20, offset: number = 0): Promise<TrashApiResponse> => {
-    const response = await apiClient.get('/trash', { params: { limit, offset } });
+    const response = await apiClient.get('/trash/', { params: { limit, offset } });
     return response.data;
   },
 
   // Restore from trash
   restoreFromTrash: async (taskIds: string[]): Promise<BulkOperationResponse> => {
-    const response = await apiClient.post('/trash/restore', {
+    const response = await apiClient.post('/trash/restore/', {
       task_ids: taskIds
     });
     return response.data;
@@ -88,7 +88,7 @@ export const taskApi = {
 
   // Cleanup trash
   cleanupTrash: async (olderThanDays: number = 30): Promise<BulkOperationResponse> => {
-    const response = await apiClient.delete('/trash/cleanup', { 
+    const response = await apiClient.delete('/trash/cleanup/', { 
       params: { older_than_days: olderThanDays } 
     });
     return response.data;
