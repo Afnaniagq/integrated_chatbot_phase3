@@ -46,7 +46,7 @@ def read_tasks(
     }
 
 
-@router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 def create_new_task(
     task_create: TaskCreate,
     current_user_id: str = Depends(get_current_user_id),
@@ -167,7 +167,7 @@ class BulkDeleteRequest(BaseModel):
     task_ids: List[UUID]
 
 
-@router.post("/bulk/update", status_code=status.HTTP_200_OK)
+@router.post("/bulk/update/", status_code=status.HTTP_200_OK)
 def bulk_update_tasks(
     request: BulkUpdateRequest,
     current_user_id: str = Depends(get_current_user_id),
@@ -205,7 +205,7 @@ def bulk_update_tasks(
     return result
 
 
-@router.post("/bulk/delete", status_code=status.HTTP_200_OK)
+@router.post("/bulk/delete/", status_code=status.HTTP_200_OK)
 def bulk_delete_tasks(
     request: BulkDeleteRequest,
     current_user_id: str = Depends(get_current_user_id),
