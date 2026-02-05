@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from src.models.user import User
 from src.models.task import Task
 from src.models.trash_bin import TrashBin
+from src.models.chat import Conversation, Message
 from sqlmodel import SQLModel
 
 # 1. This is the Alembic Config object

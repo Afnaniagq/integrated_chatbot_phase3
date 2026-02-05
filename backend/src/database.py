@@ -32,6 +32,9 @@ def get_session() -> Generator[Session, None, None]:
 def create_db_and_tables():
     """Create database tables"""
     from src.models.user import User
+    from src.models.task import Task
+    from src.models.trash_bin import TrashBin
+    from src.models.chat import Conversation, Message
     from sqlmodel import SQLModel
 
     SQLModel.metadata.create_all(engine)

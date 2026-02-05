@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from src.models.task import Task
     from src.models.category import Category
     from src.models.trash_bin import TrashBin # ADD THIS IMPORT
+    from src.models.chat import Conversation, Message
 
 class UserBase(SQLModel):
     """Base model for User with common fields"""
@@ -29,6 +30,8 @@ class User(UserBase, table=True):
     tasks: List["Task"] = Relationship(back_populates="user")
     categories: List["Category"] = Relationship(back_populates="user")
     trash_items: List["TrashBin"] = Relationship(back_populates="user")
+    conversations: List["Conversation"] = Relationship(back_populates="user")
+    messages_sent: List["Message"] = Relationship(back_populates="user_sent_messages")
 
 class UserRead(UserBase):
     id: UUID
