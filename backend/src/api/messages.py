@@ -49,20 +49,19 @@ async def create_message(
         )
 
         # Return the AI-generated response message
-        # Find the AI message that was just created
+        # Find the most recent AI message in this conversation
         ai_message = session.exec(
             select(Message)
             .where(
                 Message.conversation_id == message.conversation_id,
-                Message.role == "assistant",
-                Message.content == ai_response_content
+                Message.role == "assistant"
             )
             .order_by(Message.created_at.desc())
             .limit(1)
         ).first()
 
         if not ai_message:
-            # If we can't find the AI message, create a generic one
+            # Fallback: create a new AI message if none found
             ai_message = Message(
                 conversation_id=message.conversation_id,
                 user_id=user_uuid,

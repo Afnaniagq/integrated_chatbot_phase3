@@ -2,6 +2,12 @@
 Simple test to verify the AI service works properly
 """
 import asyncio
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 from backend.src.services.ai_service import AIService
 from uuid import UUID, uuid4
 
