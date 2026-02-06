@@ -143,23 +143,50 @@ class AIService:
         Returns:
             Formatted list of messages for the AI API
         """
-        # Create the full context string
-        context_str = f"USER CONTEXT:\n"
-        context_str += f"- Current Tasks: {[{'title': t['title'], 'priority': t['priority'], 'category': t['category']} for t in user_context['tasks']]}\n"
-        context_str += f"- Categories: {[c['name'] for c in user_context['categories']]}\n\n"
+        # Build context in a more structured way to ensure the AI understands the different parts
+        full_context_parts = []
 
+        # Add user context
+        if user_context and user_context['tasks']:
+            task_list = []
+            for task in user_context['tasks']:
+                task_info = f"- {task['title']} (Priority: {task['priority']}"
+                if task['category']:
+                    task_info += f", Category: {task['category']}"
+                if task['due_date']:
+                    task_info += f", Due: {task['due_date']}"
+                task_info += ")"
+                task_list.append(task_info)
+
+            full_context_parts.append("USER TASKS:")
+            full_context_parts.append("\n".join(task_list))
+            full_context_parts.append("")  # Empty line for readability
+
+        if user_context and user_context['categories']:
+            category_names = [cat['name'] for cat in user_context['categories']]
+            full_context_parts.append("USER CATEGORIES:")
+            full_context_parts.append(", ".join(category_names))
+            full_context_parts.append("")  # Empty line for readability
+
+        # Add conversation history if available
         if conversation_history:
-            context_str += f"CONVERSATION HISTORY:\n"
-            for msg in conversation_history:
-                context_str += f"  {msg['role'].upper()}: {msg['content']}\n"
-            context_str += "\n"
+            full_context_parts.append("CONVERSATION HISTORY (most recent at the end):")
+            for idx, msg in enumerate(conversation_history):
+                # Only show first 100 characters of each message to keep context manageable
+                content_preview = msg['content'][:200] + "..." if len(msg['content']) > 200 else msg['content']
+                full_context_parts.append(f"  [{idx+1}] {msg['role'].upper()}: {content_preview}")
+            full_context_parts.append("")  # Empty line for readability
 
-        context_str += f"NEW MESSAGE: {new_message}"
+        # Add the new user message
+        full_context_parts.append(f"CURRENT REQUEST: {new_message}")
+
+        # Combine all parts
+        full_context = "\n".join(full_context_parts)
 
         # Construct the messages list for the API call
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": context_str}
+            {"role": "user", "content": full_context}
         ]
 
         return messages
@@ -183,7 +210,9 @@ class AIService:
         Returns:
             AI response content
         """
-        # Step 1: Save user message to database
+        import openai
+
+        # Step 1: Save user message to database (ensuring persistence even if AI fails)
         user_message = Message(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -194,13 +223,17 @@ class AIService:
         session.commit()
         session.refresh(user_message)
 
-        # Step 2: Fetch user context (tasks, categories)
-        user_context = await self.get_user_context(session, user_id)
+        # Step 2: Fetch user context (tasks, categories) and conversation history
+        try:
+            user_context = await self.get_user_context(session, user_id)
+            conversation_history = await self.get_conversation_history(session, conversation_id)
+        except Exception as e:
+            logger.error(f"Error fetching context: {e}")
+            # Continue with minimal context if possible
+            user_context = {"tasks": [], "categories": []}
+            conversation_history = []
 
-        # Step 3: Fetch conversation history (last 10 messages)
-        conversation_history = await self.get_conversation_history(session, conversation_id)
-
-        # Step 4: Prepare AI prompt with combined context
+        # Step 3: Prepare AI prompt with combined context
         system_prompt = "You are a proactive Productivity Assistant. You have access to the user's current task list and help them organize, prioritize, and manage their time."
         formatted_messages = self.format_ai_prompt(
             system_prompt,
@@ -209,7 +242,7 @@ class AIService:
             user_message_content
         )
 
-        # Step 5: Call OpenAI API with structured prompt
+        # Step 4: Call OpenAI API with structured prompt
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
@@ -220,7 +253,7 @@ class AIService:
 
             ai_response_content = response.choices[0].message.content
 
-            # Step 6: Save AI response to database
+            # Step 5: Save AI response to database
             ai_message = Message(
                 conversation_id=conversation_id,
                 user_id=user_id,  # The AI message is associated with the user's conversation
@@ -230,11 +263,29 @@ class AIService:
             session.add(ai_message)
             session.commit()
 
-            # Step 7: Return AI response content
+            # Step 6: Return AI response content
             return ai_response_content
 
+        except openai.AuthenticationError as e:
+            logger.error(f"OpenAI Authentication Error: {e}")
+            # User message is still saved, return helpful error message
+            error_msg = "Sorry, there's an issue with the AI service configuration. Your message has been saved."
+            return error_msg
+
+        except openai.RateLimitError as e:
+            logger.error(f"OpenAI Rate Limit Error: {e}")
+            # User message is still saved, return helpful error message
+            error_msg = "The AI service is temporarily busy. Your message has been saved and will be processed shortly."
+            return error_msg
+
+        except openai.APIConnectionError as e:
+            logger.error(f"OpenAI API Connection Error: {e}")
+            # User message is still saved, return helpful error message
+            error_msg = "Unable to reach the AI service. Your message has been saved."
+            return error_msg
+
         except Exception as e:
-            logger.error(f"Error calling OpenAI API: {e}")
-            # Even if AI API fails, the user message is already saved
-            # We can return an error message or re-raise depending on requirements
-            raise e
+            logger.error(f"Unexpected error in process_message: {e}")
+            # User message is still saved, return helpful error message
+            error_msg = "An unexpected error occurred. Your message has been saved and we're looking into it."
+            return error_msg
