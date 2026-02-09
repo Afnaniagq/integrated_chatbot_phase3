@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@ai-sdk/react": "^3.0.79",
+    "ai": "^6.0.77"
+  }
+}
